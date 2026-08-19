@@ -8,3 +8,11 @@ requests>=2.32
 SpeechRecognition>=3.10
 gTTS>=2.5
 audio-recorder-streamlit>=0.0.10
+
+# Face recognition login (Rabia)
+# NOTE: face_recognition wraps dlib, which needs CMake + a C++ build
+# toolchain to compile on Windows. Easiest paths: `conda install -c
+# conda-forge dlib` first, then `pip install face_recognition`; or
+# install "Desktop development with C++" via Visual Studio Build Tools.
+face_recognition>=1.3
+numpy>=1.26

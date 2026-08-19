@@ -24,12 +24,17 @@ Can build/test this in isolation with a small script calling `chat_engine.send_m
 |---|---|
 | `db/supabase_client.py` | Already stubbed — just needs `SUPABASE_URL`/`SUPABASE_KEY` in `.env` |
 | `db/schema.sql` | Run in Supabase SQL editor to create the `messages` table (already drafted, adjust as needed) |
-| `db/auth.py` | `sign_up`, `sign_in`, `sign_out`, `get_current_user` |
-| `db/chat_history.py` | `save_message(user_id, role, content)`, `get_history(user_id, limit) -> list[dict]` |
-| `tools/weather_tool.py` | `get_weather(city) -> str` using a weather API |
+| `db/auth.py` | `sign_up`, `sign_in`, `sign_out`, `get_current_user`, `request_password_reset`, `update_password` — done |
+| `db/chat_history.py` | `save_message(user_id, role, content)`, `get_history(user_id, limit) -> list[dict]` — done |
+| `db/face_auth.py` | `register_face(user_id, image_bytes)`, `verify_face(image_bytes) -> dict \| None` — face-recognition sign-up/login, done |
+| `tools/weather_tool.py` | `get_weather(city) -> str` using a weather API — done |
 | `tools/tool_registry.py` | Already scaffolded — register new tools here as you add them (declaration + function mapping) |
 
 This is also where new external tools (beyond weather) get added later — each new tool is one file in `tools/` plus two lines in `tool_registry.py`.
+
+**Face login setup**: `face_recognition` wraps `dlib`, which needs CMake + a C++ build toolchain to compile on Windows — see the note in `requirements.txt`. Also needs a new `SUPABASE_SERVICE_KEY` (service_role/secret key) in `.env`, and the `face_encodings` table from the updated `db/schema.sql`.
+
+**Still needed from Ifreen (`ui/`)**: a camera widget (Streamlit's `st.camera_input`) in the sign-up flow that calls `db.face_auth.register_face`, and one in the login flow that calls `db.face_auth.verify_face` as an alternative to typing a password — both return the same dict shape as `db.auth.sign_in`, so they plug into the existing `st.session_state["user"]` handling the same way.
 
 ## Ifreen — UI & Integration (`ui/`, `app.py`)
 
