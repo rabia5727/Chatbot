@@ -7,3 +7,5 @@ env/
 .streamlit/secrets.toml
 *.log
 .DS_Store
+.pytest_cache/
+*.db

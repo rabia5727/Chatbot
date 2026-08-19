@@ -9,6 +9,7 @@ its own client.
 
 from supabase import Client, create_client
 
-from config import SUPABASE_KEY, SUPABASE_URL
+from config.settings import get_settings
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+_settings = get_settings()
+supabase: Client = create_client(_settings.supabase_url, _settings.supabase_key)

@@ -42,7 +42,7 @@ import face_recognition
 import numpy as np
 from supabase import create_client
 
-from config import SUPABASE_SERVICE_KEY, SUPABASE_URL
+from config.settings import get_settings
 from db.supabase_client import supabase
 
 MATCH_TOLERANCE = 0.6  # lower = stricter match. 0.6 is face_recognition's own default.
@@ -54,9 +54,10 @@ def _admin():
     """Lazily create the privileged (service_role) client — used only in this file."""
     global _admin_client
     if _admin_client is None:
-        if not SUPABASE_SERVICE_KEY:
+        settings = get_settings()
+        if not settings.supabase_service_key:
             raise ValueError("SUPABASE_SERVICE_KEY is not set in .env")
-        _admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        _admin_client = create_client(settings.supabase_url, settings.supabase_service_key)
     return _admin_client
 
 

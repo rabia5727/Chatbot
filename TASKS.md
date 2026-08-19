@@ -1,59 +1,54 @@
 # Task Division
 
-Three tracks, split so each person can build and test their part mostly
-independently. The contracts below (function names + what they return)
-are what let the three tracks integrate without stepping on each other —
-don't change a signature without telling whoever calls it.
+Three tracks. The contracts below (function names + what they return) are
+what let them integrate without stepping on each other.
 
-## Ghanwa — LLM Core & Voice (`core/`)
+## Ghanwa — Chat engine, Gemini, RAG (`core/`, `tools/`, `rag/`)
 
-| File | What to build |
+| File | What it does |
 |---|---|
-| `core/gemini_client.py` | Configure the Gemini SDK, expose `get_model(tools=None)` |
-| `core/prompts.py` | System prompt / prompt templates |
-| `core/chat_engine.py` | `send_message(user_id, user_text) -> str` — the full turn: call Gemini, resolve function calls via `tools.tool_registry.dispatch`, save via `db.chat_history`, return the reply text |
-| `core/stt.py` | `transcribe(audio_bytes) -> str` |
-| `core/tts.py` | `synthesize(text) -> bytes` (mp3) |
+| `core/gemini_client.py` | Gemini SDK setup (`google-genai`), `get_model(tools=...)` |
+| `core/chat_engine.py` | `send_message(user_id, user_text) -> str` (async) — the full turn: history, tool-calling loop, persistence |
+| `core/prompts.py` | System prompt + RAG grounding instructions |
+| `core/stt.py` / `core/tts.py` | Speech via Gemini's native audio support (no separate STT/TTS provider) |
+| `core/exceptions.py` | Shared exception hierarchy used across the whole backend |
+| `tools/tool_registry.py` | Decorator-based tool registration (`@register(...)`) |
+| `tools/weather.py`, `tools/calculator.py` | Built-in tools (weather via Open-Meteo — no API key needed) |
+| `rag/` | Document upload -> chunk -> embed -> retrieve -> grounded answer pipeline |
 
-Depends on: `tools.tool_registry.get_tool_declarations()` / `dispatch()` (Rabia), `db.chat_history.get_history()` / `save_message()` (Rabia).
-Can build/test this in isolation with a small script calling `chat_engine.send_message` directly — don't need the UI running.
+Originally prototyped against local SQLite + a FastAPI server (`main.py`, still in ghanwa-branch's history if a standalone API is ever needed) — ported to call Supabase directly so the whole app runs as one Streamlit process. Only `db/chat_history.py`, `db/documents.py`, and `rag/vector_store.py` changed for that; everything else here was already storage-agnostic and needed no changes.
 
-## Rabia — Data & Tools (`db/`, `tools/`)
+## Rabia — Supabase: persistence, auth, face login, tools infra (`db/`)
 
-| File | What to build |
+| File | What it does |
 |---|---|
-| `db/supabase_client.py` | Already stubbed — just needs `SUPABASE_URL`/`SUPABASE_KEY` in `.env` |
-| `db/schema.sql` | Run in Supabase SQL editor to create the `messages` table (already drafted, adjust as needed) |
-| `db/auth.py` | `sign_up`, `sign_in`, `sign_out`, `get_current_user`, `request_password_reset`, `update_password` — done |
-| `db/chat_history.py` | `save_message(user_id, role, content)`, `get_history(user_id, limit) -> list[dict]` — done |
-| `db/face_auth.py` | `register_face(user_id, image_bytes)`, `verify_face(image_bytes) -> dict \| None` — face-recognition sign-up/login, done |
-| `tools/weather_tool.py` | `get_weather(city) -> str` using a weather API — done |
-| `tools/tool_registry.py` | Already scaffolded — register new tools here as you add them (declaration + function mapping) |
+| `config/settings.py` | Single source of config (pydantic-settings, reads `.env`) |
+| `db/supabase_client.py` | Shared Supabase client |
+| `db/schema.sql` | `messages`, `face_encodings`, `documents`, `chunks` tables + RLS — run in the Supabase SQL editor |
+| `db/auth.py` | sign up, log in, log out, restore session, forgot password |
+| `db/face_auth.py` | face-recognition sign-up/login (128-d encoding via `face_recognition`, never stores the photo) |
+| `db/chat_history.py` | `add_message` / `get_recent_messages` — backs `core/chat_engine.py` |
+| `db/documents.py` | document metadata — backs `rag/rag_service.py` |
 
-This is also where new external tools (beyond weather) get added later — each new tool is one file in `tools/` plus two lines in `tool_registry.py`.
+**Setup**: `face_recognition` wraps `dlib`, which needs CMake + a C++ build toolchain on Windows (see `requirements.txt`). `pydub` (used by `core/tts.py`) needs `ffmpeg` installed and on PATH — on Windows: `winget install --id Gyan.FFmpeg -e`, then restart your shell.
 
-**Face login setup**: `face_recognition` wraps `dlib`, which needs CMake + a C++ build toolchain to compile on Windows — see the note in `requirements.txt`. Also needs a new `SUPABASE_SERVICE_KEY` (service_role/secret key) in `.env`, and the `face_encodings` table from the updated `db/schema.sql`.
+## Ifreen — Frontend (`frontend/`)
 
-**Still needed from Ifreen (`ui/`)**: a camera widget (Streamlit's `st.camera_input`) in the sign-up flow that calls `db.face_auth.register_face`, and one in the login flow that calls `db.face_auth.verify_face` as an alternative to typing a password — both return the same dict shape as `db.auth.sign_in`, so they plug into the existing `st.session_state["user"]` handling the same way.
+Built independently as its own app (`frontend/app.py`, `frontend/pages/`, `frontend/components/`) rather than filling in the original `ui/` scaffold — that's fine, `ui/` and the root `app.py` are stale now and can be deleted.
 
-## Ifreen — UI & Integration (`ui/`, `app.py`)
+Currently wired to `frontend/utils/mock_api.py` (fake responses) instead of the real backend. The function names already line up closely with the real ones, so swapping should be mechanical:
 
-| File | What to build |
+| Mock function | Real replacement |
 |---|---|
-| `ui/chat_ui.py` | Render message history |
-| `ui/sidebar.py` | Login/signup form (wires to `db.auth` once Rabia's done) |
-| `ui/voice_input.py` | Mic widget -> `core.stt.transcribe` |
-| `ui/audio_output.py` | Play TTS reply -> `core.tts.synthesize` |
-| `ui/styles.py` | Theming/CSS |
-| `app.py` | Wires all three tracks together into the running app |
+| `login_user(email, password)` | `db.auth.sign_in(email, password)` |
+| `signup_user(...)` | `db.auth.sign_up(email, password)` then `db.face_auth.register_face(user_id, face_bytes)` if a face photo was captured |
+| `verify_face(image_bytes)` | `db.face_auth.verify_face(image_bytes)` — same name already |
+| `send_chat_message(message, ...)` | `asyncio.run(core.chat_engine.send_message(user_id, message))` — note: async, needs the `asyncio.run` wrapper since Streamlit itself is sync |
+| `upload_document(file)` | `asyncio.run(rag.rag_service.ingest_document(user_id, file.name, file.type, file.getvalue()))` |
 
-## Suggested order
+## Architecture note
 
-1. Everyone stubs their functions first (mostly done already) so imports don't break.
-2. Rabia: get Supabase project created, run `schema.sql`, get `chat_history.py` working — this unblocks Ghanwa.
-3. Ghanwa: get a basic Gemini call working in `chat_engine.py` (even without tools/history) so Ifreen can test the UI end-to-end early.
-4. Wire in function calling (weather tool) and STT/TTS once the basic loop works.
-5. Auth last — the app can work with a hardcoded `demo-user` id until then (already set up that way in `app.py`).
+Originally considered a separate FastAPI backend (Ghanwa had one working). Decided against it for this deployment: one Streamlit process is simpler to deploy reliably (one hosting target, one set of env vars, no cross-service network calls, tokens, or CORS to get wrong) than coordinating two separately-hosted services. `main.py` stays available in `ghanwa-branch`'s history if a real standalone API is ever needed later (e.g. a mobile client).
 
 ## Setup for everyone
 
@@ -62,5 +57,7 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env   # fill in your API keys
-streamlit run app.py
+streamlit run frontend/app.py
 ```
+
+Run the test suite with `pytest` (uses mocks throughout — no real API keys or database needed to run it, except the RAG vector-store test which uses an in-memory fake Supabase double, not the real project).

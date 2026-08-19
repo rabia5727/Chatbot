@@ -1,8 +1,7 @@
 # Chatbot
 
-Streamlit + Gemini + Supabase chatbot with voice input/output (STT/TTS)
-and external-tool support (starting with weather) via Gemini function
-calling.
+Streamlit + Gemini + Supabase chatbot with voice input/output, face-recognition
+login, and document Q&A (RAG) via Gemini function calling.
 
 See [TASKS.md](TASKS.md) for who owns what and how the pieces fit together.
 
@@ -10,15 +9,18 @@ See [TASKS.md](TASKS.md) for who owns what and how the pieces fit together.
 
 ```
 chatbot/
-├── app.py              # Streamlit entry point — wires everything together
-├── config.py            # loads .env into shared constants
-├── core/                 # Ghanwa: Gemini calls, chat orchestration, STT, TTS
-├── db/                    # Rabia: Supabase client, auth, chat history
-├── tools/                 # Rabia: function-calling tools (weather, ...)
-├── ui/                     # Ifreen: Streamlit widgets (chat, sidebar, voice, audio)
-├── utils/                  # shared helpers
+├── frontend/            # Ifreen: the actual UI (Streamlit multi-screen app)
+│   ├── app.py             # entry point — run this
+│   ├── pages/              # signup, login, face_login, chatbot screens
+│   ├── components/          # reusable UI pieces
+│   └── utils/mock_api.py     # placeholder backend calls (being wired to the real backend)
+├── core/                 # Ghanwa: Gemini client, chat engine, STT/TTS
+├── tools/                 # Ghanwa: function-calling tools (weather, calculator)
+├── rag/                    # Ghanwa: document ingestion + retrieval-augmented Q&A
+├── db/                      # Rabia: Supabase persistence, auth, face login
+├── config/                   # shared settings (reads .env)
 ├── tests/
-└── .streamlit/config.toml   # theme
+└── app.py, ui/                # stale — superseded by frontend/, can be deleted
 ```
 
 ## Setup
@@ -32,21 +34,28 @@ copy .env.example .env
 
 Fill in `.env`:
 - `GEMINI_API_KEY` — from Google AI Studio
-- `SUPABASE_URL`, `SUPABASE_KEY` — from your Supabase project settings
-- `WEATHER_API_KEY` — from whichever weather API you pick (e.g. OpenWeatherMap)
+- `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_KEY` — from your Supabase project settings (URL/API page). `SUPABASE_KEY` is the **publishable/anon** key; `SUPABASE_SERVICE_KEY` is the **secret/service_role** key, used only server-side for face-login matching — never expose it anywhere else.
+
+Run `db/schema.sql` in your Supabase project's SQL editor to create the required tables (`messages`, `face_encodings`, `documents`, `chunks`), each with Row Level Security so users only ever see their own data.
+
+Weather lookup (`tools/weather.py`) uses Open-Meteo, which needs no API key.
+
+Face recognition (`db/face_auth.py`) needs `face_recognition`, which wraps `dlib` — on Windows this needs CMake + a C++ build toolchain to compile (or `conda install -c conda-forge dlib` first).
+
+Text-to-speech (`core/tts.py`) needs `ffmpeg` on your system PATH (not a Python package). On Windows: `winget install --id Gyan.FFmpeg -e`, then restart your terminal.
 
 Run the app:
 
 ```bash
-streamlit run app.py
+streamlit run frontend/app.py
 ```
 
-## Adding a new external tool
+Run the tests:
 
-1. Add a file in `tools/` with a single function, e.g. `tools/news_tool.py`.
-2. Register it in `tools/tool_registry.py`: add its Gemini function
-   declaration to `TOOL_DECLARATIONS` and map its name to the function
-   in `TOOL_FUNCTIONS`.
+```bash
+pytest
+```
 
-No changes needed anywhere else — `core/chat_engine.py` picks up new
-tools automatically through the registry.
+## Adding a new tool
+
+Add a file in `tools/` with a function decorated with `@register(name=..., description=..., parameters=...)` from `tools.tool_registry` (see `tools/weather.py` for the pattern), then add its module name to `_BUILTIN_MODULES` in `tools/__init__.py`. `core/chat_engine.py` picks it up automatically.

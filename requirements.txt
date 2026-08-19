@@ -1,12 +1,23 @@
 streamlit>=1.37
-google-generativeai>=0.8
 supabase>=2.6
 python-dotenv>=1.0
 requests>=2.32
 
-# STT / TTS (Ghanwa — swap for whatever you settle on)
-SpeechRecognition>=3.10
-gTTS>=2.5
+# Gemini (Ghanwa) — unified google-genai SDK (chat, tool calling, native
+# STT/TTS, embeddings for RAG). Replaces the older google-generativeai.
+google-genai
+pydantic-settings
+
+# STT/TTS are handled by Gemini directly (core/stt.py, core/tts.py) — no
+# separate STT/TTS provider needed. TTS output is transcoded to MP3 via
+# pydub, which needs ffmpeg installed and on PATH.
+pydub
+
+# RAG / document Q&A (Ghanwa)
+pymupdf
+python-docx
+
+# Voice capture widget (mic input in the browser, fed into core.stt)
 audio-recorder-streamlit>=0.0.10
 
 # Face recognition login (Rabia)
@@ -16,3 +27,7 @@ audio-recorder-streamlit>=0.0.10
 # install "Desktop development with C++" via Visual Studio Build Tools.
 face_recognition>=1.3
 numpy>=1.26
+
+# Tests
+pytest
+pytest-asyncio
