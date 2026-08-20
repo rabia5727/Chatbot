@@ -32,10 +32,10 @@ audio-recorder-streamlit>=0.0.10
 # install "Desktop development with C++" via Visual Studio Build Tools.
 face_recognition>=1.3
 numpy>=1.26
-# face_recognition_models isn't reliably pulled in by the above on newer
-# pip -- install separately if `import face_recognition` complains it's
-# missing:
-#   pip install git+https://github.com/ageitgey/face_recognition_models
+# face_recognition_models isn't reliably pulled in as a dependency of the
+# above on newer pip, so it's listed directly here (a git URL, since it's
+# not published on PyPI).
+git+https://github.com/ageitgey/face_recognition_models
 # That package (unmaintained) imports pkg_resources, which very new
 # setuptools (81+) no longer ships. This pin keeps it working:
 setuptools<81

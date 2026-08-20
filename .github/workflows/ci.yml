@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders, not real secrets -- just non-empty so db/supabase_client.py's
+      # create_client() doesn't raise at import time. No test in this suite makes a
+      # real network call: everything that touches Supabase either mocks the client
+      # or uses the in-memory FakeSupabase double in tests/test_rag_core.py.
+      GEMINI_API_KEY: ci-placeholder-key
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_KEY: ci-placeholder-anon-key
+      SUPABASE_SERVICE_KEY: ci-placeholder-service-key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies
+        # cmake/build-essential: needed to compile dlib (face_recognition).
+        # ffmpeg: needed by pydub for the TTS test (core/tts.py's MP3 encode).
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check for syntax errors
+        run: python -m py_compile $(git ls-files '*.py')
+
+      - name: Run tests
+        run: pytest -v
