@@ -4,6 +4,8 @@ Small, reusable UI building blocks shared across pages.
 
 import streamlit as st
 
+from components.icons import alert_triangle, speaker
+
 
 def logo_mark(size: int = 44, centered: bool = False) -> None:
     """Renders a simple abstract, text-free logo mark (no product name)."""
@@ -26,21 +28,14 @@ def password_field(
     help_text: str | None = None,
     placeholder: str | None = None,
 ) -> str:
-    """
-    A password input with a "show password" toggle rendered underneath it.
-    """
-    toggle_key = f"{key}_toggle"
-    show_password = st.session_state.get(toggle_key, False)
-
-    value = st.text_input(
+    """A plain password input (masked, no visibility toggle)."""
+    return st.text_input(
         label,
-        type="default" if show_password else "password",
+        type="password",
         key=key,
         help=help_text,
         placeholder=placeholder or "Enter password",
     )
-    st.checkbox("Show password", key=toggle_key)
-    return value
 
 
 def password_strength_meter(password: str) -> None:
@@ -90,7 +85,7 @@ def typing_indicator() -> None:
 
 
 def chat_error(message: str = "Something went wrong. Please try again.") -> None:
-    st.markdown(f'<div class="chat-error">⚠️ {message}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="chat-error">{alert_triangle(16)} {message}</div>', unsafe_allow_html=True)
 
 
 def voice_listening_indicator() -> None:
@@ -102,6 +97,6 @@ def voice_listening_indicator() -> None:
 
 def tts_playing_indicator() -> None:
     st.markdown(
-        '<div class="tts-indicator">🔊 Playing response</div>',
+        f'<div class="tts-indicator">{speaker(16)} Playing response</div>',
         unsafe_allow_html=True,
     )

@@ -8,8 +8,9 @@ Fits entirely inside a single viewport (~1366x768) with no page scrolling.
 """
 
 import streamlit as st
+from components.icons import alert_triangle
 from components.ui_components import logo_mark, password_field, password_strength_meter
-from utils.mock_api import signup_user, enroll_face
+from utils.backend import signup_user, enroll_face
 
 
 def render() -> None:
@@ -46,21 +47,12 @@ def render() -> None:
     # ---- Right Column: Form Card ---------------------------------------------
     with main_col2:
         with st.container(key="auth_form_card"):
-            st.text_input("Full Name", key="signup_full_name", placeholder="Enter your full name")
-            st.text_input("Email Address", key="signup_email", placeholder="Enter your email")
-
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-                password = password_field("Password", key="signup_password", placeholder="Create a password")
-            with col_p2:
-                confirm_password = password_field("Confirm Password", key="signup_confirm_password", placeholder="Confirm your password")
-
-            password_strength_meter(password)
-
-            # Face Enrollment section
+            # Face enrollment lives outside the form below -- st.camera_input
+            # doesn't work well inside st.form, and enrolling gives its own
+            # immediate feedback as a separate pre-step.
             st.markdown(
                 '<div style="margin-top:0.4rem; font-weight:700; font-size:0.84rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">'
-                '<span>📷</span> <span>Set up Face Login</span></div>',
+                '<span></span> <span>Set up Face Login</span></div>',
                 unsafe_allow_html=True,
             )
             st.caption("Capture your face to enable face login.")
@@ -72,28 +64,49 @@ def render() -> None:
                     enroll_res = enroll_face(st.session_state.signup_face_bytes)
                     st.success(enroll_res["message"])
 
-            agree = st.checkbox("I agree to the Terms of Service and Privacy Policy", key="signup_terms")
+            # Everything the account actually needs is inside one form, so
+            # "Create Account" reads every field's current value atomically
+            # at submit time -- without a form, a field you just typed into
+            # (and never clicked away from) can still read as empty, since
+            # Streamlit only syncs a text_input's value on blur/Enter.
+            with st.form(key="signup_form", border=False):
+                st.text_input("Full Name", key="signup_full_name", placeholder="Enter your full name")
+                st.text_input("Email Address", key="signup_email", placeholder="Enter your email")
 
-            error_placeholder = st.empty()
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    password = password_field("Password", key="signup_password", placeholder="Create a password")
+                with col_p2:
+                    confirm_password = password_field("Confirm Password", key="signup_confirm_password", placeholder="Confirm your password")
 
-            if st.button("Create Account", type="primary", key="signup_submit", use_container_width=True):
+                password_strength_meter(password)
+
+                agree = st.checkbox("I agree to the Terms of Service and Privacy Policy", key="signup_terms")
+
+                error_placeholder = st.empty()
+
+                submitted = st.form_submit_button(
+                    "Create Account", type="primary", use_container_width=True
+                )
+
+            if submitted:
                 full_name_val = st.session_state.get("signup_full_name", "").strip()
                 email_val = st.session_state.get("signup_email", "").strip()
                 face_bytes = st.session_state.get("signup_face_bytes")
 
                 if not full_name_val or not email_val or not password or not confirm_password:
                     error_placeholder.markdown(
-                        '<div class="chat-error">⚠️ Please fill in every required field.</div>',
+                        f'<div class="chat-error">{alert_triangle(16)} Please fill in every required field.</div>',
                         unsafe_allow_html=True,
                     )
                 elif password != confirm_password:
                     error_placeholder.markdown(
-                        '<div class="chat-error">⚠️ Passwords do not match.</div>',
+                        f'<div class="chat-error">{alert_triangle(16)} Passwords do not match.</div>',
                         unsafe_allow_html=True,
                     )
                 elif not agree:
                     error_placeholder.markdown(
-                        '<div class="chat-error">⚠️ Please accept the Terms and Privacy Policy.</div>',
+                        f'<div class="chat-error">{alert_triangle(16)} Please accept the Terms and Privacy Policy.</div>',
                         unsafe_allow_html=True,
                     )
                 else:
@@ -107,7 +120,7 @@ def render() -> None:
                         st.rerun()
                     else:
                         error_placeholder.markdown(
-                            f'<div class="chat-error">⚠️ {result["message"]}</div>',
+                            f'<div class="chat-error">{alert_triangle(16)} {result["message"]}</div>',
                             unsafe_allow_html=True,
                         )
 

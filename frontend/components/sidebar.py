@@ -57,8 +57,12 @@ def render_sidebar() -> None:
             st.markdown(f'<div class="sb-group-label">{group_label}</div>', unsafe_allow_html=True)
             for convo, time_str in visible:
                 is_active = (convo == active)
-                btn_label = f"💬  {convo}"
-                if st.button(btn_label, key=f"convo_{group_label}_{convo}", use_container_width=True):
+                if st.button(
+                    convo,
+                    icon=":material/chat_bubble_outline:",
+                    key=f"convo_{group_label}_{convo}",
+                    use_container_width=True,
+                ):
                     st.session_state.active_conversation = convo
                     st.session_state.chat_history = []
                     st.rerun()

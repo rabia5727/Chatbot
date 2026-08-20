@@ -5,6 +5,8 @@ Matches design reference 4 header.
 
 import streamlit as st
 
+from components.icons import search
+
 
 def render_header() -> None:
     title = st.session_state.get("active_conversation", "Project Summary")
@@ -16,7 +18,7 @@ def render_header() -> None:
                 <span class="header-dropdown-icon">⌄</span>
             </div>
             <div class="header-right-actions">
-                <span class="header-action-btn" title="Search">🔍</span>
+                <span class="header-action-btn" title="Search">{search(16)}</span>
                 <span class="header-action-btn" title="Share">⤴</span>
                 <span class="header-action-btn" title="More options">⋯</span>
             </div>

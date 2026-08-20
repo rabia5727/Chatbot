@@ -27,18 +27,28 @@ from db.supabase_client import supabase
 def _to_user_dict(auth_response) -> dict:
     user = auth_response.user
     session = auth_response.session
+    metadata = user.user_metadata or {}
     return {
         "id": user.id,
         "email": user.email,
+        "full_name": metadata.get("full_name"),
         "access_token": session.access_token if session else None,
         "refresh_token": session.refresh_token if session else None,
     }
 
 
-def sign_up(email: str, password: str) -> dict:
-    """Create a new account, return {"id", "email", "access_token", "refresh_token"}."""
+def sign_up(email: str, password: str, full_name: str | None = None) -> dict:
+    """Create a new account, return {"id", "email", "full_name", "access_token", "refresh_token"}.
+
+    access_token/refresh_token will be None if the Supabase project has
+    "Confirm email" enabled (the default) — the user has to click the
+    confirmation link and then sign_in() before there's a real session.
+    """
+    payload = {"email": email, "password": password}
+    if full_name:
+        payload["options"] = {"data": {"full_name": full_name}}
     try:
-        response = supabase.auth.sign_up({"email": email, "password": password})
+        response = supabase.auth.sign_up(payload)
     except Exception as e:
         raise ValueError(f"Sign up failed: {e}") from e
     if response.user is None:

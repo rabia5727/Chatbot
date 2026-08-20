@@ -9,12 +9,29 @@ This file owns:
 Run with:  python -m streamlit run app.py
 """
 
-import streamlit as st
+import sys
 from pathlib import Path
+
+import streamlit as st
+
+# frontend/ is what Streamlit puts on sys.path (so `pages`/`components`/
+# `utils` resolve), but utils/backend.py needs to reach the project's
+# top-level core/db/rag/tools/config packages one directory up -- add the
+# repo root too, before anything below imports backend.py.
+#
+# Appended, not inserted at 0: the repo root also has its own stale
+# top-level `utils/` package (leftover from the original scaffold, now
+# superseded by frontend/). Prepending it would let that shadow
+# frontend/utils/ instead of the real one -- append so frontend/'s own
+# packages are always found first, and the repo root is only consulted
+# for names frontend/ doesn't have (core, db, rag, tools, config).
+_REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+if _REPO_ROOT not in sys.path:
+    sys.path.append(_REPO_ROOT)
 
 st.set_page_config(
     page_title="AI Assistant",
-    page_icon="✨",
+    page_icon=":material/forum:",
     layout="wide",
     initial_sidebar_state="expanded",
 )

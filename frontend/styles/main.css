@@ -92,7 +92,8 @@ div[data-testid="column"] {
 }
 
 /* Buttons */
-.stButton > button {
+.stButton > button,
+.stFormSubmitButton > button {
   border-radius: var(--radius-sm) !important;
   padding: 0.5rem 1rem !important;
   font-weight: 600 !important;
@@ -104,19 +105,22 @@ div[data-testid="column"] {
   box-shadow: var(--shadow-sm) !important;
 }
 
-.stButton > button:hover {
+.stButton > button:hover,
+.stFormSubmitButton > button:hover {
   border-color: var(--accent) !important;
   color: var(--accent) !important;
 }
 
-.stButton > button[kind="primary"] {
+.stButton > button[kind="primary"],
+.stFormSubmitButton > button[kind="primaryFormSubmit"] {
   background: var(--accent) !important;
   border: 1.5px solid var(--accent) !important;
   color: #FFFFFF !important;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
 }
 
-.stButton > button[kind="primary"]:hover {
+.stButton > button[kind="primary"]:hover,
+.stFormSubmitButton > button[kind="primaryFormSubmit"]:hover {
   background: var(--accent-hover) !important;
   border-color: var(--accent-hover) !important;
   color: #FFFFFF !important;
@@ -297,6 +301,17 @@ div[class*="st-key-face_camera_card"] {
   border-radius: 50%;
   background: #16A34A;
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+}
+
+.camera-status-row.off {
+  color: #64748B;
+}
+
+.pulse-dot-gray {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94A3B8;
 }
 
 .verify-result-box {

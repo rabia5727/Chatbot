@@ -8,22 +8,30 @@ Owner: Ghanwa (structure) / Rabia (Supabase fields)
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Absolute path, not "env_file=.env" -- a relative path resolves against
+# the process's current working directory, which depends on how/where the
+# app got launched (e.g. Streamlit run from a different cwd) and silently
+# finds no .env at all in that case. This always finds the one next to
+# the project root, regardless of launch method.
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings, populated from the environment / .env file."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILE,
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     # Gemini
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3.6-flash"
     gemini_tts_model: str = "gemini-2.5-flash-preview-tts"
     gemini_embedding_model: str = "gemini-embedding-001"
 

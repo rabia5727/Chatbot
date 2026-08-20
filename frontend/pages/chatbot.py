@@ -12,18 +12,19 @@ import streamlit as st
 from components.sidebar import render_sidebar
 from components.header import render_header
 from components.chat_message import render_user_message, render_assistant_message
+from components.icons import chat, cloud, document
 from components.ui_components import (
     logo_mark,
     typing_indicator,
     voice_listening_indicator,
     tts_playing_indicator,
 )
-from utils.mock_api import send_chat_message, upload_document
+from utils.backend import send_chat_message, upload_document
 
 SUGGESTED_PROMPTS = [
-    ("📄", "Ask about a document"),
-    ("🌤️", "Check the weather"),
-    ("💬", "Ask anything"),
+    (document(22), "Ask about a document"),
+    (cloud(22), "Check the weather"),
+    (chat(22), "Ask anything"),
 ]
 
 MESSAGE_LIST_HEIGHT = 440
@@ -83,7 +84,7 @@ def _render_empty_state() -> None:
     with st.container(height=MESSAGE_LIST_HEIGHT, border=False):
         st.markdown('<div class="empty-state-wrap">', unsafe_allow_html=True)
         logo_mark(size=44, centered=True)
-        st.markdown(f'<div class="empty-state-greeting">Hello, {first_name}! 👋</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="empty-state-greeting">Hello, {first_name}!</div>', unsafe_allow_html=True)
         st.markdown('<div class="empty-state-sub">How can I help you today?</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -115,7 +116,7 @@ def _render_chat_history() -> None:
                 if st.session_state.tts_playing_index == i:
                     tts_playing_indicator()
                 else:
-                    if st.button("🔊 Play response", key=f"tts_{i}"):
+                    if st.button("Play response", icon=":material/volume_up:", key=f"tts_{i}"):
                         st.session_state.tts_playing_index = i
                         st.rerun()
 
@@ -125,7 +126,7 @@ def _render_input_row() -> None:
     col_attach, col_mic, col_input = st.columns([1, 1, 12], gap="small")
 
     with col_attach:
-        with st.popover("📎", use_container_width=True):
+        with st.popover("", icon=":material/attach_file:", use_container_width=True):
             uploaded = st.file_uploader(
                 "Upload a document",
                 type=["pdf", "docx", "txt"],
@@ -139,7 +140,7 @@ def _render_input_row() -> None:
                     st.caption(f"Ready to reference: **{result['filename']}**")
 
     with col_mic:
-        if st.button("🎤", key="mic_button", help="Voice input (UI demo only)"):
+        if st.button("", icon=":material/mic:", key="mic_button", help="Voice input (UI demo only)"):
             st.session_state.voice_listening = not st.session_state.voice_listening
             st.rerun()
 

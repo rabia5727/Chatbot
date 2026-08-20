@@ -7,8 +7,9 @@ Fits entirely inside a single viewport (~1366x768) with no page scrolling.
 """
 
 import streamlit as st
+from components.icons import alert_triangle
 from components.ui_components import logo_mark, password_field
-from utils.mock_api import login_user
+from utils.backend import login_user
 
 
 def render() -> None:
@@ -59,20 +60,29 @@ def render() -> None:
             if success_msg:
                 st.success(success_msg)
 
-            st.text_input("Email Address", key="login_email", placeholder="Enter your email")
+            # Wrapped in a form so "Login" reads both fields' current value
+            # atomically at submit time -- without a form, a field you just
+            # typed into (and never clicked away from) can still read as
+            # empty, since Streamlit only syncs a text_input on blur/Enter.
+            with st.form(key="login_form", border=False):
+                st.text_input("Email Address", key="login_email", placeholder="Enter your email")
 
-            password = password_field("Password", key="login_password", placeholder="Enter your password")
+                password = password_field("Password", key="login_password", placeholder="Enter your password")
 
-            # Forgot password row
-            st.markdown(
-                '<div style="text-align: right; margin-top: -0.4rem; margin-bottom: 0.6rem;">'
-                '<span class="forgot-link">Forgot password?</span></div>',
-                unsafe_allow_html=True,
-            )
+                # Forgot password row
+                st.markdown(
+                    '<div style="text-align: right; margin-top: -0.4rem; margin-bottom: 0.6rem;">'
+                    '<span class="forgot-link">Forgot password?</span></div>',
+                    unsafe_allow_html=True,
+                )
 
-            error_placeholder = st.empty()
+                error_placeholder = st.empty()
 
-            if st.button("Login", type="primary", key="login_submit", use_container_width=True):
+                submitted = st.form_submit_button(
+                    "Login", type="primary", use_container_width=True
+                )
+
+            if submitted:
                 email_val = st.session_state.get("login_email", "").strip()
                 result = login_user(email_val, password)
                 if result["success"]:
@@ -82,13 +92,13 @@ def render() -> None:
                     st.rerun()
                 else:
                     error_placeholder.markdown(
-                        f'<div class="chat-error">⚠️ {result["message"]}</div>',
+                        f'<div class="chat-error">{alert_triangle(16)} {result["message"]}</div>',
                         unsafe_allow_html=True,
                     )
 
             st.markdown('<div class="auth-divider"><span>or</span></div>', unsafe_allow_html=True)
 
-            if st.button("📷  Login with Face", key="login_with_face", use_container_width=True):
+            if st.button("Login with Face", key="login_with_face", use_container_width=True):
                 st.session_state.page = "face_login"
                 st.session_state.face_state = "idle"
                 st.rerun()

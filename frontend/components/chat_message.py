@@ -5,6 +5,8 @@ assistant UI states: normal reply, RAG reply, and weather-tool reply.
 
 import streamlit as st
 
+from components.icons import document
+
 
 def render_user_message(text: str, timestamp: str = "") -> None:
     with st.chat_message("user"):
@@ -18,18 +20,21 @@ def render_user_message(text: str, timestamp: str = "") -> None:
 def render_assistant_message(payload: dict, timestamp: str = "") -> None:
     """
     payload is one of the dict shapes returned by
-    utils.mock_api.send_chat_message():
+    utils.backend.send_chat_message():
       {"type": "normal", "answer": str}
       {"type": "rag", "source": str, "answer": str}
-      {"type": "weather", "location": str, "temperature": str,
-       "condition": str, "humidity": str}
+
+    The "weather" shape below is unreachable now -- weather answers come
+    back as plain text through Gemini's tool-calling (type "normal"),
+    same as any other tool result. Left in case a structured weather
+    card is wanted again later.
     """
     msg_type = payload.get("type", "normal")
 
     with st.chat_message("assistant"):
         if msg_type == "rag":
             st.markdown(
-                f'<div class="msg-source-pill">📄 Based on: {payload["source"]}</div>',
+                f'<div class="msg-source-pill">{document(14)} Based on: {payload["source"]}</div>',
                 unsafe_allow_html=True,
             )
             st.markdown(
