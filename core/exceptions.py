@@ -1,6 +1,6 @@
 """Application-level exception hierarchy.
 
-Raw SDK / provider exceptions (Gemini SDK errors, sqlite3.Error, requests
+Raw SDK / provider exceptions (Gemini SDK errors, requests
 exceptions, etc.) should be caught close to their source and re-raised as
 one of these, so upper layers (FastAPI routes, callers) never need to know
 which provider is behind a given feature.
@@ -17,10 +17,6 @@ class GeminiConfigurationError(ChatbotError):
 
 class ChatEngineError(ChatbotError):
     """Raised for errors during a chat turn (validation, orchestration, limits)."""
-
-
-class ChatHistoryError(ChatbotError):
-    """Raised when chat history cannot be loaded or persisted."""
 
 
 class ToolNotFoundError(ChatbotError):

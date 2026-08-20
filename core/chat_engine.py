@@ -1,10 +1,9 @@
-"""Main chat orchestration layer: one complete user turn, including
-multi-step Gemini tool calling, history loading, and persistence.
+"""Stateless chat orchestration for one complete user turn, including
+multi-step Gemini tool calling.
 
-Flow: validate input -> load history -> build Gemini conversation ->
-send to Gemini -> if a tool call is requested, dispatch it via
-tools.tool_registry.dispatch and feed the result back -> repeat until
-Gemini returns final text -> persist the turn -> return the reply.
+Flow: validate input -> build a single-turn Gemini conversation -> send to
+Gemini -> if a tool call is requested, dispatch it via the tool registry and
+feed the result back -> repeat until Gemini returns final text.
 """
 
 from __future__ import annotations
@@ -18,7 +17,6 @@ from config.settings import get_settings
 from core.exceptions import ChatEngineError, ToolExecutionError, ToolNotFoundError
 from core.gemini_client import get_model
 from core.prompts import build_system_instruction
-from db import chat_history
 from tools import load_builtin_tools
 from tools.tool_registry import dispatch, list_tool_specs
 
@@ -29,16 +27,15 @@ async def send_message(user_id: str, user_text: str) -> str:
     """Run one full chat turn for ``user_id`` and return the assistant's reply.
 
     Raises:
-        ChatEngineError: on invalid input, history failure, tool-call limit
-            exceeded, or an unusable Gemini response.
+        ChatEngineError: on invalid input, tool-call limit exceeded, or an
+            unusable Gemini response.
     """
     if not user_text or not user_text.strip():
         raise ChatEngineError("Message text must not be empty.")
 
     settings = get_settings()
 
-    history = await _load_history(user_id, settings.max_chat_history)
-    contents = _build_contents(history, user_text)
+    contents = _build_contents([], user_text)
 
     load_builtin_tools()
     tool_specs = list_tool_specs()
@@ -46,20 +43,11 @@ async def send_message(user_id: str, user_text: str) -> str:
     model = get_model(tools=tool_specs)
     final_text = await _run_turn(model, contents, settings.max_tool_calls)
 
-    await _save_turn(user_id, user_text, final_text)
     return final_text
 
 
-async def _load_history(user_id: str, limit: int) -> list[dict]:
-    try:
-        return await chat_history.get_recent_messages(user_id, limit)
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Failed to load chat history for user %s: %s", user_id, exc)
-        raise ChatEngineError("Could not load conversation history.") from exc
-
-
 def _build_contents(history: list[dict], user_text: str) -> list[types.Content]:
-    """Convert stored history + the new user message into Gemini Content objects."""
+    """Convert optional supplied history plus a new message into Gemini content."""
     contents: list[types.Content] = []
     for message in history:
         stored_role = message["role"]
@@ -167,13 +155,3 @@ async def _execute_tool(name: str, arguments: dict) -> dict:
     except Exception:  # noqa: BLE001 - last-resort guard, must never crash the turn
         logger.exception("Unexpected error executing tool '%s'", name)
         return {"error": f"Tool '{name}' failed unexpectedly."}
-
-
-async def _save_turn(user_id: str, user_text: str, assistant_text: str) -> None:
-    try:
-        await chat_history.add_message(user_id, "user", user_text)
-        await chat_history.add_message(user_id, "assistant", assistant_text)
-    except Exception as exc:  # noqa: BLE001
-        # Persistence failure shouldn't erase the reply the user already got,
-        # but it must not be silently swallowed either.
-        logger.error("Failed to persist chat turn for user %s: %s", user_id, exc)

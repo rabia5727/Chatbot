@@ -12,12 +12,11 @@ from config.settings import get_settings
 from core.exceptions import DocumentProcessingError, EmbeddingError, RAGError
 from core.gemini_client import get_model
 from core.prompts import RAG_GROUNDING_INSTRUCTIONS, build_rag_prompt
-from db import documents
 from rag.chunker import chunk_text
 from rag.document_loader import extract_text
 from rag.embeddings import embed_texts
 from rag.retriever import retrieve
-from rag.vector_store import store_chunks
+from rag.vector_store import VectorStore
 
 
 def safe_filename(filename: str) -> str:
@@ -26,7 +25,8 @@ def safe_filename(filename: str) -> str:
     return name or "document"
 
 
-async def ingest_document(user_id: str, filename: str, mime_type: str, file_bytes: bytes) -> dict:
+async def process_document(user_id: str, filename: str, mime_type: str, file_bytes: bytes) -> dict:
+    """Extract, chunk, and embed a document without persisting it."""
     if not user_id.strip():
         raise DocumentProcessingError("A user ID is required.")
     settings = get_settings()
@@ -45,29 +45,30 @@ async def ingest_document(user_id: str, filename: str, mime_type: str, file_byte
         "document_id": document_id, "user_id": user_id, "filename": clean_name,
         "mime_type": mime_type, "chunk_count": len(texts),
     }
-    try:
-        await documents.create_document(metadata)
-        await store_chunks([
-            {
-                **metadata, "chunk_index": index, "page": None,
-                "text": chunk, "embedding": vector,
-            }
-            for index, (chunk, vector) in enumerate(zip(texts, vectors))
-        ])
-    except Exception as exc:
-        await documents.delete_document(document_id, user_id)
-        raise RAGError("Could not store the processed document.") from exc
-    return {"document_id": document_id, "filename": clean_name, "chunks_created": len(texts)}
+    chunks = [
+        {
+            **metadata, "chunk_index": index, "page": None,
+            "text": chunk, "embedding": vector,
+        }
+        for index, (chunk, vector) in enumerate(zip(texts, vectors))
+    ]
+    return {"metadata": metadata, "chunks": chunks}
 
 
-async def query_documents(user_id: str, question: str, document_id: str | None = None) -> dict:
+async def store_processed_document(processed: dict, storage: VectorStore) -> None:
+    """Integration point for a database-team-provided storage backend."""
+    await storage.store_document(processed["metadata"], processed["chunks"])
+
+
+async def query_documents(
+    user_id: str,
+    question: str,
+    storage: VectorStore,
+    document_id: str | None = None,
+) -> dict:
     if not question.strip():
         raise RAGError("Question must not be empty.")
-    if document_id:
-        document = await documents.get_document(document_id)
-        if not document or document["user_id"] != user_id:
-            raise RAGError("Document was not found for this user.")
-    results = await retrieve(user_id, question, document_id=document_id)
+    results = await retrieve(user_id, question, storage, document_id=document_id)
     if not results:
         return {
             "answer": "The uploaded document does not provide enough information to answer that question.",

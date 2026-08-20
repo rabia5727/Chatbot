@@ -26,12 +26,7 @@ class Settings(BaseSettings):
     gemini_embedding_model: str = "gemini-embedding-001"
 
     # Chat engine
-    max_chat_history: int = 20
     max_tool_calls: int = 5
-
-    # Persistence
-    chat_db_path: str = "data/chat_history.db"
-    rag_db_path: str = "data/rag.db"
 
     # Retrieval-augmented generation
     rag_chunk_size: int = 1000
