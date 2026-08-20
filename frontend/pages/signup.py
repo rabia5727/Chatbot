@@ -59,8 +59,31 @@ def render() -> None:
 
             # Face Enrollment section
             st.markdown(
-                '<div style="margin-top:0.4rem; font-weight:700; font-size:0.84rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">'
-                '<span>📷</span> <span>Set up Face Login</span></div>',
+                '''
+    <div style="margin-top:0.4rem; font-weight:700; font-size:0.84rem;
+                color:var(--text-primary); display:flex; align-items:center;
+                gap:0.4rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24"
+             fill="none" xmlns="http://www.w3.org/2000/svg"
+             style="color:#000000;">
+            <path
+                d="M4 8.5C4 7.67 4.67 7 5.5 7H8L9.5 5H14.5L16 7H18.5C19.33 7 20 7.67 20 8.5V17C20 17.83 19.33 18.5 18.5 18.5H5.5C4.67 18.5 4 17.83 4 17V8.5Z"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+            <circle
+                cx="12"
+                cy="12.5"
+                r="3"
+                stroke="currentColor"
+                stroke-width="1.7"
+            />
+        </svg>
+        <span>Set up Face Login</span>
+    </div>
+    ''',
                 unsafe_allow_html=True,
             )
             st.caption("Capture your face to enable face login.")

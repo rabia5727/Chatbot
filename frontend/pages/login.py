@@ -26,8 +26,8 @@ def render() -> None:
                 unsafe_allow_html=True,
             )
 
-            # Modern chair / interior illustration matching design reference 2
-            st.markdown(
+            # Modern chair / interior illustration
+            st.html(
                 """
                 <div class="brand-illustration">
                     <svg width="220" height="170" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -88,7 +88,12 @@ def render() -> None:
 
             st.markdown('<div class="auth-divider"><span>or</span></div>', unsafe_allow_html=True)
 
-            if st.button("📷  Login with Face", key="login_with_face", use_container_width=True):
+            if st.button(
+                "",
+                key="login_with_face",
+                use_container_width=True,
+                icon=":material/photo_camera:",
+            ):
                 st.session_state.page = "face_login"
                 st.session_state.face_state = "idle"
                 st.rerun()

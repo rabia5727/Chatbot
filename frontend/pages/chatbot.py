@@ -125,21 +125,34 @@ def _render_input_row() -> None:
     col_attach, col_mic, col_input = st.columns([1, 1, 12], gap="small")
 
     with col_attach:
-        with st.popover("📎", use_container_width=True):
+        with st.popover(
+            "",
+            icon=":material/attach_file:",
+            use_container_width=True,
+        ):
             uploaded = st.file_uploader(
                 "Upload a document",
                 type=["pdf", "docx", "txt"],
                 label_visibility="collapsed",
                 key="file_uploader",
             )
+
             if uploaded is not None:
                 result = upload_document(uploaded)
+
                 if result["success"]:
                     st.session_state.pending_file = uploaded
-                    st.caption(f"Ready to reference: **{result['filename']}**")
+                    st.caption(
+                        f"Ready to reference: **{result['filename']}**"
+                    )
 
     with col_mic:
-        if st.button("🎤", key="mic_button", help="Voice input (UI demo only)"):
+        if st.button(
+            "",
+            key="mic_button",
+            help="Voice input (UI demo only)",
+            icon=":material/mic:",
+        ):
             st.session_state.voice_listening = not st.session_state.voice_listening
             st.rerun()
 
